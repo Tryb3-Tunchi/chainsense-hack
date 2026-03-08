@@ -1,0 +1,4 @@
+schedule: "*/5 * * * *"
+openaiApiKey: "$OPENAI_API_KEY"
+jsonbinApiKey: "$JSONBIN_API_KEY"
+jsonbinBinId: "$JSONBIN_BIN_ID"
