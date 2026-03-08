@@ -1,9 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Plus, Trash2, Search, RefreshCw } from "lucide-react";
 import CryptoCard from "../components/CryptoCard";
-import { CryptoData, formatPrice, getChangeColor } from "../utils";
+import {
+  CryptoData,
+  formatPrice,
+  getChangeColor,
+  getRiskBadgeStyle,
+} from "../utils";
 
 interface CustomCoin {
   id: string;
@@ -49,11 +54,13 @@ export default function Watchlist() {
         `https://api.coingecko.com/api/v3/search?query=${query}`,
       );
       const data = await response.json();
-      const results = data.coins.slice(0, 10).map((coin: any) => ({
-        id: coin.id,
-        name: coin.name,
-        symbol: coin.symbol.toUpperCase(),
-      }));
+      const results = data.coins
+        .slice(0, 10)
+        .map((coin: { id: string; name: string; symbol: string }) => ({
+          id: coin.id,
+          name: coin.name,
+          symbol: coin.symbol.toUpperCase(),
+        }));
       setSearchResults(results);
     } catch (err) {
       console.error("Search error:", err);
@@ -92,7 +99,7 @@ export default function Watchlist() {
   };
 
   // Fetch watchlist data
-  const fetchWatchlistData = async () => {
+  const fetchWatchlistData = useCallback(async () => {
     if (watchlist.length === 0) return;
 
     setLoading(true);
@@ -122,27 +129,19 @@ export default function Watchlist() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [watchlist]);
 
   useEffect(() => {
     fetchWatchlistData();
     const interval = setInterval(fetchWatchlistData, 15000);
     return () => clearInterval(interval);
-  }, [watchlist]);
+  }, [fetchWatchlistData]);
 
   const getRiskBg = (change: number) => {
     const absChange = Math.abs(change);
     if (absChange < 2) return "border-green-500";
     if (absChange < 5) return "border-yellow-500";
     return "border-red-500";
-  };
-
-  const getRiskLabel = (change: number) => {
-    const absChange = Math.abs(change);
-    if (absChange < 2) return { color: "bg-green-600", text: "LOW VOLATILITY" };
-    if (absChange < 5)
-      return { color: "bg-yellow-600", text: "MEDIUM VOLATILITY" };
-    return { color: "bg-red-600", text: "HIGH VOLATILITY" };
   };
 
   return (
@@ -269,9 +268,20 @@ export default function Watchlist() {
                     </div>
                   </div>
                   <div
-                    className={`px-2 py-1 rounded text-xs font-bold text-white inline-block ${getRiskLabel(crypto.change24h).color}`}
+                    className={`inline-block px-3 py-1 rounded-full text-[10px] font-bold border transition-all cursor-default ${getRiskBadgeStyle(
+                      Math.abs(crypto.change24h) < 2
+                        ? "LOW"
+                        : Math.abs(crypto.change24h) < 5
+                          ? "MEDIUM"
+                          : "HIGH",
+                    )}`}
                   >
-                    {getRiskLabel(crypto.change24h).text}
+                    {Math.abs(crypto.change24h) < 2
+                      ? "LOW"
+                      : Math.abs(crypto.change24h) < 5
+                        ? "MEDIUM"
+                        : "HIGH"}{" "}
+                    RISK
                   </div>
                 </div>
 

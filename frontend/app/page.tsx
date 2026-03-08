@@ -13,10 +13,12 @@ import {
   Verdict,
   CryptoData,
   getRiskColor,
-  getRiskTextColor,
+  getRiskBadgeStyle,
   formatPrice,
   formatChange,
+  CRYPTO_COINS,
 } from "./utils";
+import PriceChart from "./components/PriceChart";
 
 export default function Home() {
   const [verdict, setVerdict] = useState<Verdict | null>(null);
@@ -54,94 +56,7 @@ export default function Home() {
       );
       if (cryptoResponse.ok) {
         const data = await cryptoResponse.json();
-        const coins = [
-          {
-            id: "bitcoin",
-            symbol: "BTC",
-            name: "Bitcoin",
-            icon: "₿",
-            color: "#f7931a",
-          },
-          {
-            id: "ethereum",
-            symbol: "ETH",
-            name: "Ethereum",
-            icon: "Ξ",
-            color: "#627eea",
-          },
-          {
-            id: "solana",
-            symbol: "SOL",
-            name: "Solana",
-            icon: "◎",
-            color: "#14f195",
-          },
-          {
-            id: "cardano",
-            symbol: "ADA",
-            name: "Cardano",
-            icon: "₳",
-            color: "#0033ad",
-          },
-          {
-            id: "ripple",
-            symbol: "XRP",
-            name: "XRP",
-            icon: "✕",
-            color: "#23292f",
-          },
-          {
-            id: "polkadot",
-            symbol: "DOT",
-            name: "Polkadot",
-            icon: "●",
-            color: "#e6007a",
-          },
-          {
-            id: "dogecoin",
-            symbol: "DOGE",
-            name: "Dogecoin",
-            icon: "🐕",
-            color: "#ba9f33",
-          },
-          {
-            id: "chainlink",
-            symbol: "LINK",
-            name: "Chainlink",
-            icon: "⛓",
-            color: "#375bd2",
-          },
-          {
-            id: "monero",
-            symbol: "XMR",
-            name: "Monero",
-            icon: "₥",
-            color: "#ff6600",
-          },
-          {
-            id: "polygon",
-            symbol: "MATIC",
-            name: "Polygon",
-            icon: "P",
-            color: "#8247e5",
-          },
-          {
-            id: "uniswap",
-            symbol: "UNI",
-            name: "Uniswap",
-            icon: "∞",
-            color: "#ff007a",
-          },
-          {
-            id: "litecoin",
-            symbol: "LTC",
-            name: "Litecoin",
-            icon: "Ł",
-            color: "#345d9d",
-          },
-        ];
-
-        const cryptoList = coins.map((coin) => ({
+        const cryptoList = CRYPTO_COINS.map((coin) => ({
           ...coin,
           price: data[coin.id]?.usd || 0,
           change24h: data[coin.id]?.usd_24h_change || 0,
@@ -286,49 +201,74 @@ export default function Home() {
                   </div>
 
                   {/* Price Section */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                    <div className="bg-gray-900/50 rounded-lg p-5 border border-gray-700/50">
-                      <p className="text-gray-400 text-sm mb-2">
-                        Current Price
-                      </p>
-                      <p className="text-4xl font-bold text-cyan-400">
-                        {formatPrice(featuredCoin.price)}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-2">
-                        {featuredCoin.symbol}
-                      </p>
-                    </div>
-                    <div className="bg-gray-900/50 rounded-lg p-5 border border-gray-700/50">
-                      <p className="text-gray-400 text-sm mb-2">24h Change</p>
-                      <div
-                        className={`flex items-center gap-2 ${featuredCoin.change24h >= 0 ? "text-green-400" : "text-red-400"}`}
-                      >
-                        {featuredCoin.change24h >= 0 ? (
-                          <TrendingUp className="w-6 h-6" />
-                        ) : (
-                          <TrendingDown className="w-6 h-6" />
-                        )}
-                        <p className="text-4xl font-bold">
-                          {formatChange(featuredCoin.change24h)}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    {/* Left Column: Price & Stats */}
+                    <div className="lg:col-span-1 space-y-4">
+                      <div className="bg-gray-900/50 rounded-lg p-5 border border-gray-700/50">
+                        <p className="text-gray-400 text-sm mb-2">
+                          Current Price
+                        </p>
+                        <p className="text-4xl font-bold text-cyan-400">
+                          {formatPrice(featuredCoin.price)}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-2">
+                          {featuredCoin.symbol}
+                        </p>
+                      </div>
+
+                      <div className="bg-gray-900/50 rounded-lg p-5 border border-gray-700/50">
+                        <p className="text-gray-400 text-sm mb-2">24h Change</p>
+                        <div
+                          className={`flex items-center gap-2 ${featuredCoin.change24h >= 0 ? "text-green-400" : "text-red-400"}`}
+                        >
+                          {featuredCoin.change24h >= 0 ? (
+                            <TrendingUp className="w-6 h-6" />
+                          ) : (
+                            <TrendingDown className="w-6 h-6" />
+                          )}
+                          <p className="text-4xl font-bold">
+                            {formatChange(featuredCoin.change24h)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="bg-gray-900/50 rounded-lg p-5 border border-gray-700/50">
+                        <p className="text-gray-400 text-sm mb-2">
+                          Market Status
+                        </p>
+                        <p
+                          className={`text-3xl font-bold ${featuredCoin.change24h >= 0 ? "text-green-400" : "text-red-400"}`}
+                        >
+                          {featuredCoin.change24h >= 0
+                            ? "📈 Bullish"
+                            : "📉 Bearish"}
                         </p>
                       </div>
                     </div>
-                    <div className="bg-gray-900/50 rounded-lg p-5 border border-gray-700/50">
-                      <p className="text-gray-400 text-sm mb-2">
-                        Market Status
-                      </p>
-                      <p
-                        className={`text-3xl font-bold ${featuredCoin.change24h >= 0 ? "text-green-400" : "text-red-400"}`}
-                      >
-                        {featuredCoin.change24h >= 0
-                          ? "📈 Bullish"
-                          : "📉 Bearish"}
-                      </p>
+
+                    {/* Right Column: Interactive Chart */}
+                    <div className="lg:col-span-2">
+                      <div className="bg-gray-900/50 rounded-lg p-4 border border-gray-700/50 h-full flex flex-col">
+                        <div className="flex items-center justify-between mb-4">
+                          <p className="text-gray-400 text-sm font-semibold">
+                            24h Performance Visualization
+                          </p>
+                          <span className="text-xs text-cyan-400 bg-cyan-400/10 px-2 py-1 rounded-full animate-pulse">
+                            Live Feed
+                          </span>
+                        </div>
+                        <div className="flex-1">
+                          <PriceChart
+                            coinId={featuredCoin.id}
+                            currentPrice={featuredCoin.price}
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Market Data */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                  {/* Market Data Grid */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                     <div className="bg-gray-900/50 rounded p-3 border border-gray-700/50">
                       <p className="text-gray-400 text-xs mb-1">Market Cap</p>
                       <p className="text-lg font-bold text-purple-400">
@@ -349,11 +289,11 @@ export default function Home() {
                     </div>
                     <div className="bg-gray-900/50 rounded p-3 border border-gray-700/50">
                       <p className="text-gray-400 text-xs mb-1">Risk Level</p>
-                      <p
-                        className={`text-lg font-bold ${getRiskTextColor(verdict?.riskLevel || "MEDIUM")}`}
+                      <span
+                        className={`inline-block px-3 py-1 rounded-full text-xs font-bold border transition-all cursor-default ${getRiskBadgeStyle(verdict?.riskLevel)}`}
                       >
                         {verdict?.riskLevel || "MEDIUM"}
-                      </p>
+                      </span>
                     </div>
                   </div>
 

@@ -17,11 +17,11 @@ interface ChartDataPoint {
 }
 
 interface PriceChartProps {
-  symbol: string;
   coinId: string;
+  currentPrice: number;
 }
 
-export default function PriceChart({ symbol, coinId }: PriceChartProps) {
+export default function PriceChart({ coinId, currentPrice }: PriceChartProps) {
   const [data, setData] = useState<ChartDataPoint[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -29,16 +29,19 @@ export default function PriceChart({ symbol, coinId }: PriceChartProps) {
     const generateMockData = () => {
       const now = new Date();
       const points: ChartDataPoint[] = [];
+      const basePrice = currentPrice || 40000;
 
       for (let i = 23; i >= 0; i--) {
         const time = new Date(now.getTime() - i * 3600000);
-        const variance = Math.sin(i / 5) * 1000 + Math.random() * 2000;
+        const variance =
+          Math.sin(i / 5) * (basePrice * 0.02) +
+          Math.random() * (basePrice * 0.03);
         points.push({
           time: time.toLocaleTimeString("en-US", {
             hour: "2-digit",
             minute: "2-digit",
           }),
-          price: 40000 + variance,
+          price: basePrice + variance,
         });
       }
 
@@ -49,21 +52,24 @@ export default function PriceChart({ symbol, coinId }: PriceChartProps) {
     generateMockData();
     const interval = setInterval(() => {
       setData((prev) => {
+        if (prev.length === 0) return prev;
         const newData = [...prev.slice(1)];
-        const lastTime = new Date(new Date().getTime() - 1 * 3600000);
+        const lastTime = new Date();
+        const basePrice = currentPrice || 40000;
         newData.push({
           time: lastTime.toLocaleTimeString("en-US", {
             hour: "2-digit",
             minute: "2-digit",
           }),
-          price: 40000 + Math.random() * 5000 - 2500,
+          price:
+            basePrice + (Math.random() * (basePrice * 0.04) - basePrice * 0.02),
         });
         return newData;
       });
-    }, 3000);
+    }, 5000);
 
     return () => clearInterval(interval);
-  }, [coinId]);
+  }, [coinId, currentPrice]);
 
   if (loading) {
     return (
@@ -85,16 +91,20 @@ export default function PriceChart({ symbol, coinId }: PriceChartProps) {
           <XAxis
             dataKey="time"
             stroke="#888"
-            style={{ fontSize: "11px" }}
+            fontSize={11}
             tick={{ fill: "#888" }}
-            interval={Math.floor(data.length / 6)}
+            interval="preserveStartEnd"
           />
           <YAxis
             stroke="#888"
-            style={{ fontSize: "11px" }}
+            fontSize={11}
             tick={{ fill: "#888" }}
-            domain={["dataMin - 500", "dataMax + 500"]}
-            width={40}
+            domain={["auto", "auto"]}
+            width={60}
+            tickFormatter={(value: number) => {
+              if (value >= 1000) return `$${(value / 1000).toFixed(1)}k`;
+              return `$${value.toFixed(2)}`;
+            }}
           />
           <Tooltip
             contentStyle={{
@@ -103,7 +113,10 @@ export default function PriceChart({ symbol, coinId }: PriceChartProps) {
               borderRadius: "6px",
             }}
             labelStyle={{ color: "#fff" }}
-            formatter={(value: number) => `$${value.toFixed(2)}`}
+            formatter={(value: any) => [
+              `$${parseFloat(value).toFixed(2)}`,
+              "Price",
+            ]}
             cursor={{ stroke: "#06b6d4", strokeDasharray: "5 5" }}
           />
           <Line

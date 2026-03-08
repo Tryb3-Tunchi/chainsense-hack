@@ -140,6 +140,20 @@ export const getRiskTextColor = (level: string) => {
   }
 };
 
+export const getRiskBadgeStyle = (level: string | undefined) => {
+  const l = level || "MEDIUM";
+  switch (l) {
+    case "LOW":
+      return "bg-green-500/20 text-green-400 border-green-500/50 hover:bg-green-500/30";
+    case "MEDIUM":
+      return "bg-yellow-500/20 text-yellow-400 border-yellow-500/50 hover:bg-yellow-500/30";
+    case "HIGH":
+      return "bg-red-500/20 text-red-400 border-red-500/50 hover:bg-red-500/30";
+    default:
+      return "bg-gray-500/20 text-gray-400 border-gray-500/50 hover:bg-gray-500/30";
+  }
+};
+
 export const getChangeColor = (change: number | string | undefined) => {
   if (!change) return "text-gray-400";
   const num = typeof change === "string" ? parseFloat(change) : change;
@@ -159,12 +173,49 @@ export const fetchCryptoData = async (): Promise<CryptoData[]> => {
 
   return CRYPTO_COINS.map((coin) => ({
     ...coin,
-    price: data[coin.id].usd || 0,
-    change24h: data[coin.id].usd_24h_change || 0,
-    marketCap: data[coin.id].usd_market_cap || 0,
-    volume24h: data[coin.id].usd_24h_vol || 0,
-    marketCapRank: data[coin.id].market_cap_rank || 0,
+    price: data[coin.id]?.usd || 0,
+    change24h: data[coin.id]?.usd_24h_change || 0,
+    marketCap: data[coin.id]?.usd_market_cap || 0,
+    volume24h: data[coin.id]?.usd_24h_vol || 0,
+    marketCapRank: data[coin.id]?.market_cap_rank || 0,
   }));
+};
+
+export const fetchSingleCoinData = async (
+  id: string,
+): Promise<CryptoData | null> => {
+  const coin = CRYPTO_COINS.find((c) => c.id === id);
+  if (!coin) return null;
+
+  try {
+    const response = await fetch(
+      `https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd&include_market_cap=true&include_24hr_vol=true&include_24hr_change=true&include_market_cap_rank=true`,
+      { cache: "no-store" },
+    );
+
+    if (!response.ok) throw new Error("Failed to fetch coin data");
+
+    const data = await response.json();
+
+    return {
+      ...coin,
+      price: data[id]?.usd || 0,
+      change24h: data[id]?.usd_24h_change || 0,
+      marketCap: data[id]?.usd_market_cap || 0,
+      volume24h: data[id]?.usd_24h_vol || 0,
+      marketCapRank: data[id]?.market_cap_rank || 0,
+    };
+  } catch (err) {
+    console.error(`Error fetching data for ${id}:`, err);
+    return {
+      ...coin,
+      price: 0,
+      change24h: 0,
+      marketCap: 0,
+      volume24h: 0,
+      marketCapRank: 0,
+    };
+  }
 };
 
 export const fetchVerdict = async () => {

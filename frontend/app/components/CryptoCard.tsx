@@ -8,6 +8,7 @@ import {
   formatMarketCap,
   formatChange,
   getChangeColor,
+  getRiskBadgeStyle,
 } from "@/app/utils";
 
 interface CryptoCardProps {
@@ -15,90 +16,81 @@ interface CryptoCardProps {
   onFocus?: (crypto: CryptoData) => void;
 }
 
-export default function CryptoCard({ crypto }: CryptoCardProps) {
+export default function CryptoCard({ crypto, onFocus }: CryptoCardProps) {
   const getRiskBg = () => {
     const absChange = Math.abs(crypto.change24h);
-    if (absChange < 2) return "border-green-500 hover:shadow-green-500/30";
-    if (absChange < 5) return "border-yellow-500 hover:shadow-yellow-500/30";
-    return "border-red-500 hover:shadow-red-500/30";
+    if (absChange < 2) return "hover:border-green-500/50 hover:shadow-green-500/10";
+    if (absChange < 5) return "hover:border-yellow-500/50 hover:shadow-yellow-500/10";
+    return "hover:border-red-500/50 hover:shadow-red-500/10";
   };
 
-  const getRiskIndicator = () => {
-    const absChange = Math.abs(crypto.change24h);
-    if (absChange < 2) return { color: "bg-green-500", label: "LOW RISK" };
-    if (absChange < 5) return { color: "bg-yellow-500", label: "MEDIUM RISK" };
-    return { color: "bg-red-500", label: "HIGH RISK" };
-  };
-
-  const risk = getRiskIndicator();
+  const riskLevel = Math.abs(crypto.change24h) < 2 
+    ? "LOW" 
+    : Math.abs(crypto.change24h) < 5 
+      ? "MEDIUM" 
+      : "HIGH";
 
   return (
     <Link href={`/coin/${crypto.id}`}>
       <div
         onClick={() => onFocus?.(crypto)}
-        className={`bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg p-6 border-2 border-gray-700 ${getRiskBg()} transition-all hover:shadow-lg cursor-pointer group`}
+        className={`bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg p-5 border border-gray-700 ${getRiskBg()} transition-all hover:shadow-xl cursor-pointer group h-full flex flex-col`}
       >
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
             <div
-              className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg"
+              className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-inner"
               style={{ backgroundColor: crypto.color }}
             >
               {crypto.icon}
             </div>
             <div>
-              <h3 className="font-semibold text-lg group-hover:text-blue-400 transition-colors">
+              <h3 className="font-semibold text-base group-hover:text-blue-400 transition-colors leading-tight">
                 {crypto.name}
               </h3>
-              <p className="text-gray-400 text-sm">{crypto.symbol}</p>
+              <p className="text-gray-500 text-xs">{crypto.symbol}</p>
             </div>
           </div>
-          <div
-            className={`px-2 py-1 rounded text-xs font-bold text-white ${risk.color}`}
+          <span
+            className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold border transition-all ${getRiskBadgeStyle(riskLevel)}`}
           >
-            {risk.label}
-          </div>
+            {riskLevel}
+          </span>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-4 flex-1">
           <div>
-            <p className="text-gray-400 text-sm mb-1">Price</p>
-            <p className="text-3xl font-bold">{formatPrice(crypto.price)}</p>
+            <p className="text-gray-500 text-[10px] uppercase tracking-wider font-semibold mb-0.5">Price</p>
+            <p className="text-2xl font-bold text-white leading-none tracking-tight">{formatPrice(crypto.price)}</p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-4 border-t border-gray-700/50 pt-4">
             <div>
-              <p className="text-gray-400 text-xs mb-1">24h Change</p>
+              <p className="text-gray-500 text-[10px] uppercase tracking-wider font-semibold mb-1">24h Change</p>
               <p
-                className={`flex items-center gap-1 font-semibold ${getChangeColor(crypto.change24h)}`}
+                className={`flex items-center gap-1 text-sm font-bold ${getChangeColor(crypto.change24h)}`}
               >
                 {crypto.change24h >= 0 ? (
-                  <TrendingUp className="w-4 h-4" />
+                  <TrendingUp className="w-3 h-3" />
                 ) : (
-                  <TrendingDown className="w-4 h-4" />
+                  <TrendingDown className="w-3 h-3" />
                 )}
                 {formatChange(crypto.change24h)}
               </p>
             </div>
             <div>
-              <p className="text-gray-400 text-xs mb-1">Market Cap</p>
-              <p className="text-sm font-semibold text-cyan-400">
+              <p className="text-gray-500 text-[10px] uppercase tracking-wider font-semibold mb-1">Market Cap</p>
+              <p className="text-sm font-bold text-cyan-400">
                 {formatMarketCap(crypto.marketCap)}
               </p>
             </div>
           </div>
-
-          <div>
-            <p className="text-gray-400 text-xs mb-1">24h Volume</p>
-            <p className="text-sm font-semibold text-purple-400">
-              {formatMarketCap(crypto.volume24h)}
-            </p>
-          </div>
         </div>
 
-        <div className="mt-4 pt-4 border-t border-gray-700">
-          <p className="text-xs text-gray-500 group-hover:text-blue-400 transition-colors">
-            Click to view analysis and chart →
+        <div className="mt-4 pt-3 border-t border-gray-700/30">
+          <p className="text-[10px] text-gray-500 group-hover:text-blue-400 transition-colors flex items-center justify-between">
+            <span>View Analysis</span>
+            <span>→</span>
           </p>
         </div>
       </div>

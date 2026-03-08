@@ -10,76 +10,10 @@ import {
   formatMarketCap,
   formatChange,
   getChangeColor,
+  getRiskBadgeStyle,
+  getRiskColor,
+  fetchSingleCoinData,
 } from "@/app/utils";
-
-const CRYPTO_COINS = [
-  {
-    id: "bitcoin",
-    symbol: "BTC",
-    name: "Bitcoin",
-    icon: "₿",
-    color: "#f7931a",
-  },
-  {
-    id: "ethereum",
-    symbol: "ETH",
-    name: "Ethereum",
-    icon: "Ξ",
-    color: "#627eea",
-  },
-  { id: "solana", symbol: "SOL", name: "Solana", icon: "◎", color: "#14f195" },
-  {
-    id: "cardano",
-    symbol: "ADA",
-    name: "Cardano",
-    icon: "₳",
-    color: "#0033ad",
-  },
-  { id: "ripple", symbol: "XRP", name: "XRP", icon: "✕", color: "#23292f" },
-  {
-    id: "polkadot",
-    symbol: "DOT",
-    name: "Polkadot",
-    icon: "●",
-    color: "#e6007a",
-  },
-  {
-    id: "dogecoin",
-    symbol: "DOGE",
-    name: "Dogecoin",
-    icon: "🐕",
-    color: "#ba9f33",
-  },
-  {
-    id: "chainlink",
-    symbol: "LINK",
-    name: "Chainlink",
-    icon: "⛓",
-    color: "#375bd2",
-  },
-  { id: "monero", symbol: "XMR", name: "Monero", icon: "₥", color: "#ff6600" },
-  {
-    id: "polygon",
-    symbol: "MATIC",
-    name: "Polygon",
-    icon: "P",
-    color: "#8247e5",
-  },
-  {
-    id: "uniswap",
-    symbol: "UNI",
-    name: "Uniswap",
-    icon: "∞",
-    color: "#ff007a",
-  },
-  {
-    id: "litecoin",
-    symbol: "LTC",
-    name: "Litecoin",
-    icon: "Ł",
-    color: "#345d9d",
-  },
-];
 
 interface AIAnalysis {
   riskLevel: "LOW" | "MEDIUM" | "HIGH";
@@ -88,67 +22,31 @@ interface AIAnalysis {
   volatility: number;
 }
 
-export default function CoinDetail({ params }: { params: { id: string } }) {
+export default function CoinDetail({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const router = useRouter();
   const [crypto, setCrypto] = useState<CryptoData | null>(null);
   const [analysis, setAnalysis] = useState<AIAnalysis | null>(null);
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
 
-  const coin = CRYPTO_COINS.find((c) => c.id === params.id);
-
   useEffect(() => {
-    const fetchCryptoData = async () => {
-      if (!coin) return;
-
-      try {
-        const response = await fetch(
-          `https://api.coingecko.com/api/v3/simple/price?ids=${coin.id}&vs_currencies=usd&include_market_cap=true&include_24hr_vol=true&include_24hr_change=true&include_market_cap_rank=true`,
-        );
-        const data = await response.json();
-
-        setCrypto({
-          ...coin,
-          price: data[coin.id]?.usd || 0,
-          change24h: data[coin.id]?.usd_24h_change || 0,
-          marketCap: data[coin.id]?.usd_market_cap || 0,
-          volume24h: data[coin.id]?.usd_24h_vol || 0,
-          marketCapRank: data[coin.id]?.market_cap_rank || 0,
-        });
-
-        setLoading(false);
-      } catch (err) {
-        console.error("Error fetching crypto data:", err);
-        // Set fallback data on error
-        setCrypto({
-          ...coin,
-          price: 0,
-          change24h: 0,
-          marketCap: 0,
-          volume24h: 0,
-          marketCapRank: 0,
-        });
-        setLoading(false);
+    const loadData = async () => {
+      const { id } = await params;
+      const data = await fetchSingleCoinData(id);
+      if (data) {
+        setCrypto(data);
       }
+      setLoading(false);
     };
 
-    if (coin) {
-      // Set initial coin data immediately
-      setCrypto({
-        ...coin,
-        price: 0,
-        change24h: 0,
-        marketCap: 0,
-        volume24h: 0,
-        marketCapRank: 0,
-      });
-      setLoading(false);
-      // Then fetch live data
-      fetchCryptoData();
-      const interval = setInterval(fetchCryptoData, 15000);
-      return () => clearInterval(interval);
-    }
-  }, [coin]);
+    loadData();
+    const interval = setInterval(loadData, 15000);
+    return () => clearInterval(interval);
+  }, [params]);
 
   const performAIAnalysis = async () => {
     if (!crypto) return;
@@ -201,39 +99,13 @@ export default function CoinDetail({ params }: { params: { id: string } }) {
   const getRiskBg = (level: string) => {
     switch (level) {
       case "LOW":
-        return "bg-green-500/20 border-green-500";
+        return "bg-green-500/20 border-green-500/50 hover:bg-green-500/30";
       case "MEDIUM":
-        return "bg-yellow-500/20 border-yellow-500";
+        return "bg-yellow-500/20 border-yellow-500/50 hover:bg-yellow-500/30";
       case "HIGH":
-        return "bg-red-500/20 border-red-500";
+        return "bg-red-500/20 border-red-500/50 hover:bg-red-500/30";
       default:
-        return "bg-gray-500/20 border-gray-500";
-    }
-  };
-
-  const getRiskColor = (level: string) => {
-    switch (level) {
-      case "LOW":
-        return "text-green-400";
-      case "MEDIUM":
-        return "text-yellow-400";
-      case "HIGH":
-        return "text-red-400";
-      default:
-        return "text-gray-400";
-    }
-  };
-
-  const getRiskBgBadge = (level: string) => {
-    switch (level) {
-      case "LOW":
-        return "bg-green-600";
-      case "MEDIUM":
-        return "bg-yellow-600";
-      case "HIGH":
-        return "bg-red-600";
-      default:
-        return "bg-gray-600";
+        return "bg-gray-500/20 border-gray-500/50 hover:bg-gray-500/30";
     }
   };
 
@@ -342,7 +214,7 @@ export default function CoinDetail({ params }: { params: { id: string } }) {
             >
               <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4">
                 <span
-                  className={`px-4 py-2 rounded-full text-white font-bold text-base sm:text-lg whitespace-nowrap ${getRiskBgBadge(analysis.riskLevel)}`}
+                  className={`inline-block px-3 py-1 rounded-full text-xs font-bold border transition-all cursor-default ${getRiskBadgeStyle(analysis.riskLevel)}`}
                 >
                   {analysis.riskLevel} RISK
                 </span>
@@ -384,7 +256,7 @@ export default function CoinDetail({ params }: { params: { id: string } }) {
           <h2 className="text-xl sm:text-2xl font-bold mb-4">
             24-Hour Price Movement
           </h2>
-          <PriceChart symbol={crypto.symbol} coinId={crypto.id} />
+          <PriceChart coinId={crypto.id} currentPrice={crypto.price} />
         </div>
 
         {/* Market Data Grid - Responsive */}

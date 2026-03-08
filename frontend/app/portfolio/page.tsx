@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { RefreshCw, Plus, Trash2 } from "lucide-react";
 import CryptoCard from "../components/CryptoCard";
-import { CryptoData, formatPrice, CRYPTO_COINS } from "../utils";
+import { CryptoData, formatPrice, fetchCryptoData } from "../utils";
 
 interface PortfolioAsset {
   id: string;
@@ -23,24 +23,11 @@ export default function Portfolio() {
     cost: "",
   });
 
-  const fetchCryptoData = async () => {
+  const loadCryptoData = async () => {
     setLoading(true);
     try {
-      const coinIds = CRYPTO_COINS.map((c) => c.id).join(",");
-      const response = await fetch(
-        `https://api.coingecko.com/api/v3/simple/price?ids=${coinIds}&vs_currencies=usd&include_market_cap=true&include_24hr_vol=true&include_24hr_change=true&include_market_cap_rank=true`,
-      );
-      const data = await response.json();
-
-      const cryptoList = CRYPTO_COINS.map((coin) => ({
-        ...coin,
-        price: data[coin.id]?.usd || 0,
-        change24h: data[coin.id]?.usd_24h_change || 0,
-        marketCap: data[coin.id]?.usd_market_cap || 0,
-        volume24h: data[coin.id]?.usd_24h_vol || 0,
-        marketCapRank: data[coin.id]?.market_cap_rank || 0,
-      }));
-      setCryptoData(cryptoList);
+      const data = await fetchCryptoData();
+      setCryptoData(data);
     } catch (err) {
       console.error("Error fetching crypto data:", err);
     } finally {
@@ -49,8 +36,8 @@ export default function Portfolio() {
   };
 
   useEffect(() => {
-    fetchCryptoData();
-    const interval = setInterval(fetchCryptoData, 15000);
+    loadCryptoData();
+    const interval = setInterval(loadCryptoData, 15000);
     return () => clearInterval(interval);
   }, []);
 
