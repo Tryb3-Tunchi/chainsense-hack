@@ -35,6 +35,6 @@ yarn-error.log*
 *.tsbuildinfo
 
 # CRE artifacts
-.cre_build_tmp.js
+# .cre_build_tmp.js
 workflow-artifacts/
 
