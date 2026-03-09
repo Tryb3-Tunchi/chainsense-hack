@@ -88,6 +88,27 @@ export const CRYPTO_COINS = [
     icon: "Ł",
     color: "#345d9d",
   },
+  {
+    id: "avalanche-2",
+    symbol: "AVAX",
+    name: "Avalanche",
+    icon: "🔺",
+    color: "#e84142",
+  },
+  {
+    id: "binancecoin",
+    symbol: "BNB",
+    name: "Binance Coin",
+    icon: "🔶",
+    color: "#f0b90b",
+  },
+  {
+    id: "tron",
+    symbol: "TRX",
+    name: "TRON",
+    icon: "₮",
+    color: "#ff060a",
+  },
 ];
 
 export const formatPrice = (price: number | undefined) => {

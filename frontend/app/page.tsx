@@ -26,8 +26,9 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
-  const [timeRemaining, setTimeRemaining] = useState(15);
+  const [timeRemaining, setTimeRemaining] = useState(10);
   const [featuredCoin, setFeaturedCoin] = useState<CryptoData | null>(null);
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -76,17 +77,21 @@ export default function Home() {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(() => {
-      setTimeRemaining((prev) => {
-        if (prev <= 1) {
-          fetchData();
-          return 15;
-        }
-        return prev - 1;
-      });
+    const dataInterval = setInterval(fetchData, 10000);
+
+    const timerInterval = setInterval(() => {
+      setTimeRemaining((prev) => (prev > 1 ? prev - 1 : 10));
     }, 1000);
 
-    return () => clearInterval(interval);
+    const clockInterval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => {
+      clearInterval(dataInterval);
+      clearInterval(timerInterval);
+      clearInterval(clockInterval);
+    };
   }, [fetchData]);
 
   return (
@@ -102,13 +107,27 @@ export default function Home() {
           </p>
         </div>
         <div className="flex items-center gap-4">
+          <div className="hidden sm:flex items-center gap-2 bg-gray-800 rounded-lg px-4 py-2">
+            <Clock className="w-4 h-4 text-cyan-400" />
+            <span className="text-sm font-semibold">
+              {currentTime.toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              })}{" "}
+              |{" "}
+              {currentTime.toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </span>
+          </div>
           <div className="flex items-center gap-2 bg-gray-800 rounded-lg px-4 py-2">
             {loading ? (
               <RefreshCw className="w-4 h-4 text-cyan-400 animate-spin" />
             ) : error ? (
               <AlertCircle className="w-4 h-4 text-red-400" />
             ) : (
-              <Clock className="w-4 h-4 text-cyan-400" />
+              <RefreshCw className="w-4 h-4 text-cyan-400" />
             )}
             <span className="text-sm font-semibold">
               {loading
@@ -118,14 +137,6 @@ export default function Home() {
                   : `Next update in ${timeRemaining}s`}
             </span>
           </div>
-          <button
-            onClick={fetchData}
-            disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50 transition-all"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-            Refresh Now
-          </button>
         </div>
       </div>
 

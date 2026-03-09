@@ -62,6 +62,15 @@ export default function CoinDetail({
   const performAIAnalysis = async () => {
     if (!crypto) return;
 
+    if (crypto.price === 0) {
+      setAnalyzing(true);
+      setAnalysisStep("Waiting for live market data...");
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      setAnalyzing(false);
+      setAnalysisStep("");
+      return;
+    }
+
     setAnalyzing(true);
     setAnalysis(null);
 
