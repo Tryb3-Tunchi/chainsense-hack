@@ -33,15 +33,17 @@ export default function PriceChart({ coinId, currentPrice }: PriceChartProps) {
 
       for (let i = 23; i >= 0; i--) {
         const time = new Date(now.getTime() - i * 3600000);
+        // Add a trend element to make it look like a real market
+        const trend = (23 - i) * (basePrice * 0.001);
         const variance =
-          Math.sin(i / 5) * (basePrice * 0.02) +
-          Math.random() * (basePrice * 0.03);
+          Math.sin(i / 3) * (basePrice * 0.015) +
+          Math.random() * (basePrice * 0.02);
         points.push({
           time: time.toLocaleTimeString("en-US", {
             hour: "2-digit",
             minute: "2-digit",
           }),
-          price: basePrice + variance,
+          price: basePrice - trend + variance,
         });
       }
 
@@ -113,8 +115,8 @@ export default function PriceChart({ coinId, currentPrice }: PriceChartProps) {
               borderRadius: "6px",
             }}
             labelStyle={{ color: "#fff" }}
-            formatter={(value: any) => [
-              `$${parseFloat(value).toFixed(2)}`,
+            formatter={(value: number | string) => [
+              `$${parseFloat(value.toString()).toFixed(2)}`,
               "Price",
             ]}
             cursor={{ stroke: "#06b6d4", strokeDasharray: "5 5" }}

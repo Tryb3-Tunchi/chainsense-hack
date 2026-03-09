@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   RefreshCw,
   TrendingUp,
@@ -16,7 +16,7 @@ import {
   getRiskBadgeStyle,
   formatPrice,
   formatChange,
-  CRYPTO_COINS,
+  fetchCryptoData,
 } from "./utils";
 import PriceChart from "./components/PriceChart";
 
@@ -29,10 +29,25 @@ export default function Home() {
   const [timeRemaining, setTimeRemaining] = useState(15);
   const [featuredCoin, setFeaturedCoin] = useState<CryptoData | null>(null);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      setError(null);
+      // Fetch crypto data
+      const cryptoList = await fetchCryptoData();
+      if (cryptoList.length > 0) {
+        setCryptoData(cryptoList);
+
+        // Ensure featured coin has the latest data if it's already set
+        if (featuredCoin) {
+          const updatedFeatured = cryptoList.find(
+            (c) => c.id === featuredCoin.id,
+          );
+          if (updatedFeatured) setFeaturedCoin(updatedFeatured);
+        } else {
+          setFeaturedCoin(cryptoList[0]);
+        }
+      }
 
       // Fetch verdict
       const verdictResponse = await fetch(
@@ -41,6 +56,7 @@ export default function Home() {
           headers: {
             "X-Master-Key": process.env.NEXT_PUBLIC_JSONBIN_API_KEY!,
           },
+          cache: "no-store",
         },
       );
       if (verdictResponse.ok) {
@@ -48,48 +64,30 @@ export default function Home() {
         setVerdict(data.record);
       }
 
-      // Fetch crypto data - more coins including volatile ones
-      const coinIds =
-        "bitcoin,ethereum,solana,cardano,ripple,polkadot,dogecoin,chainlink,monero,polygon,uniswap,litecoin";
-      const cryptoResponse = await fetch(
-        `https://api.coingecko.com/api/v3/simple/price?ids=${coinIds}&vs_currencies=usd&include_market_cap=true&include_24hr_vol=true&include_24hr_change=true&include_market_cap_rank=true`,
-      );
-      if (cryptoResponse.ok) {
-        const data = await cryptoResponse.json();
-        const cryptoList = CRYPTO_COINS.map((coin) => ({
-          ...coin,
-          price: data[coin.id]?.usd || 0,
-          change24h: data[coin.id]?.usd_24h_change || 0,
-          marketCap: data[coin.id]?.usd_market_cap || 0,
-          volume24h: data[coin.id]?.usd_24h_vol || 0,
-          marketCapRank: data[coin.id]?.market_cap_rank || 0,
-        }));
-        setCryptoData(cryptoList);
-        // Set featured coin to BTC on first load, or keep the current one if user selected it
-        setFeaturedCoin((prev) => prev || cryptoList[0]);
-      }
-
       setLastUpdate(new Date());
       setTimeRemaining(15);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+      console.error("Error fetching dashboard data:", err);
+      setError("Unable to load latest market data. Please try again later.");
     } finally {
       setLoading(false);
     }
-  };
+  }, [featuredCoin]);
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 15000); // 15 seconds
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeRemaining((prev) => (prev > 0 ? prev - 1 : 15));
+    const interval = setInterval(() => {
+      setTimeRemaining((prev) => {
+        if (prev <= 1) {
+          fetchData();
+          return 15;
+        }
+        return prev - 1;
+      });
     }, 1000);
-    return () => clearInterval(timer);
-  }, []);
+
+    return () => clearInterval(interval);
+  }, [fetchData]);
 
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto">
@@ -105,9 +103,19 @@ export default function Home() {
         </div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 bg-gray-800 rounded-lg px-4 py-2">
-            <Clock className="w-4 h-4 text-cyan-400" />
+            {loading ? (
+              <RefreshCw className="w-4 h-4 text-cyan-400 animate-spin" />
+            ) : error ? (
+              <AlertCircle className="w-4 h-4 text-red-400" />
+            ) : (
+              <Clock className="w-4 h-4 text-cyan-400" />
+            )}
             <span className="text-sm font-semibold">
-              {lastUpdate ? lastUpdate.toLocaleTimeString() : "Loading..."}
+              {loading
+                ? "Refreshing..."
+                : error
+                  ? "Retrying..."
+                  : `Next update in ${timeRemaining}s`}
             </span>
           </div>
           <button
@@ -116,7 +124,7 @@ export default function Home() {
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50 transition-all"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-            Refresh
+            Refresh Now
           </button>
         </div>
       </div>
@@ -141,15 +149,16 @@ export default function Home() {
           <p className="text-sm text-gray-400">
             Last analysis:{" "}
             {verdict.timestamp
-              ? new Date(verdict.timestamp).toLocaleString()
+              ? new Date(verdict.timestamp).toLocaleString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: true,
+                })
               : "Unknown"}
           </p>
-        </div>
-      )}
-
-      {error && (
-        <div className="bg-red-900 border border-red-700 rounded-lg p-4 mb-6">
-          <p className="text-red-200">Error: {error}</p>
         </div>
       )}
 

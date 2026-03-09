@@ -20,17 +20,24 @@ export const onCronTrigger = (runtime: Runtime<Config>): string => {
   runtime.log("Fetching market data from CoinGecko...");
   const marketResponse = http.get(
     runtime,
-    "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd&include_24hr_change=true"
+    "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd&include_24hr_change=true",
   );
-  const market = JSON.parse(marketResponse.body);
+  const market = JSON.parse(marketResponse.body) as Record<
+    string,
+    { usd: number; usd_24h_change: number }
+  >;
+
   if (!market.bitcoin || !market.ethereum) {
     throw new Error("Invalid market data response");
   }
+
   const btcPrice = market.bitcoin.usd;
-  const btcChange = market.bitcoin.usd_24h_change.toFixed(2);
+  const btcChange = (market.bitcoin.usd_24h_change ?? 0).toFixed(2);
   const ethPrice = market.ethereum.usd;
-  const ethChange = market.ethereum.usd_24h_change.toFixed(2);
-  runtime.log(`BTC: $${btcPrice} (${btcChange}%) | ETH: $${ethPrice} (${ethChange}%)`);
+  const ethChange = (market.ethereum.usd_24h_change ?? 0).toFixed(2);
+  runtime.log(
+    `BTC: $${btcPrice} (${btcChange}%) | ETH: $${ethPrice} (${ethChange}%)`,
+  );
 
   runtime.log("Sending to OpenAI...");
   const prompt = `You are a DeFi risk analyst. Given this market data:
@@ -44,22 +51,31 @@ Respond ONLY with valid JSON, no extra text:
     "https://api.openai.com/v1/chat/completions",
     JSON.stringify({
       model: "gpt-4o-mini",
-      max_tokens: 100,
+      max_tokens: 150,
       temperature: 0.3,
       messages: [{ role: "user", content: prompt }],
     }),
     {
       "Content-Type": "application/json",
       Authorization: `Bearer ${config.openaiApiKey}`,
-    }
+    },
   );
-  const aiJson = JSON.parse(aiResponse.body);
-  if (!aiJson.choices || !aiJson.choices[0] || !aiJson.choices[0].message) {
-    throw new Error("Invalid AI response");
+
+  interface AIResponse {
+    choices: Array<{
+      message: {
+        content: string;
+      };
+    }>;
   }
-  const raw = aiJson.choices[0].message.content.trim();
+
+  const aiJson = JSON.parse(aiResponse.body) as AIResponse;
+  if (!aiJson.choices || !aiJson.choices[0] || !aiJson.choices[0].message) {
+    throw new Error("Invalid AI response structure");
+  }
+  const raw = (aiJson.choices[0].message.content || "").trim();
   const cleaned = raw.replace(/```json\n?|\n?```/g, "").trim();
-  let verdict;
+  let verdict: { riskLevel: string; summary: string };
   try {
     verdict = JSON.parse(cleaned);
   } catch (e) {
@@ -84,7 +100,7 @@ Respond ONLY with valid JSON, no extra text:
     {
       "Content-Type": "application/json",
       "X-Master-Key": config.jsonbinApiKey,
-    }
+    },
   );
 
   runtime.log("✅ Done!");

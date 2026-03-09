@@ -68,8 +68,8 @@ export const CRYPTO_COINS = [
   },
   { id: "monero", symbol: "XMR", name: "Monero", icon: "₥", color: "#ff6600" },
   {
-    id: "polygon",
-    symbol: "MATIC",
+    id: "matic-network",
+    symbol: "POL",
     name: "Polygon",
     icon: "P",
     color: "#8247e5",
@@ -163,7 +163,7 @@ export const getChangeColor = (change: number | string | undefined) => {
 export const fetchCryptoData = async (): Promise<CryptoData[]> => {
   const coinIds = CRYPTO_COINS.map((c) => c.id).join(",");
   const response = await fetch(
-    `https://api.coingecko.com/api/v3/simple/price?ids=${coinIds}&vs_currencies=usd&include_market_cap=true&include_24hr_vol=true&include_24hr_change=true&include_market_cap_rank=true`,
+    `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${coinIds}&order=market_cap_desc&per_page=100&page=1&sparkline=false&price_change_percentage=24h`,
     { cache: "no-store" },
   );
 
@@ -171,14 +171,17 @@ export const fetchCryptoData = async (): Promise<CryptoData[]> => {
 
   const data = await response.json();
 
-  return CRYPTO_COINS.map((coin) => ({
-    ...coin,
-    price: data[coin.id]?.usd || 0,
-    change24h: data[coin.id]?.usd_24h_change || 0,
-    marketCap: data[coin.id]?.usd_market_cap || 0,
-    volume24h: data[coin.id]?.usd_24h_vol || 0,
-    marketCapRank: data[coin.id]?.market_cap_rank || 0,
-  }));
+  return CRYPTO_COINS.map((coin) => {
+    const marketData = data.find((d: { id: string; current_price: number; price_change_percentage_24h: number; market_cap: number; total_volume: number; market_cap_rank: number }) => d.id === coin.id);
+    return {
+      ...coin,
+      price: marketData?.current_price || 0,
+      change24h: marketData?.price_change_percentage_24h || 0,
+      marketCap: marketData?.market_cap || 0,
+      volume24h: marketData?.total_volume || 0,
+      marketCapRank: marketData?.market_cap_rank || 0,
+    };
+  });
 };
 
 export const fetchSingleCoinData = async (
@@ -189,21 +192,22 @@ export const fetchSingleCoinData = async (
 
   try {
     const response = await fetch(
-      `https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd&include_market_cap=true&include_24hr_vol=true&include_24hr_change=true&include_market_cap_rank=true`,
+      `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${id}&order=market_cap_desc&per_page=1&page=1&sparkline=false&price_change_percentage=24h`,
       { cache: "no-store" },
     );
 
     if (!response.ok) throw new Error("Failed to fetch coin data");
 
     const data = await response.json();
+    const marketData = data[0];
 
     return {
       ...coin,
-      price: data[id]?.usd || 0,
-      change24h: data[id]?.usd_24h_change || 0,
-      marketCap: data[id]?.usd_market_cap || 0,
-      volume24h: data[id]?.usd_24h_vol || 0,
-      marketCapRank: data[id]?.market_cap_rank || 0,
+      price: marketData?.current_price || 0,
+      change24h: marketData?.price_change_percentage_24h || 0,
+      marketCap: marketData?.market_cap || 0,
+      volume24h: marketData?.total_volume || 0,
+      marketCapRank: marketData?.market_cap_rank || 0,
     };
   } catch (err) {
     console.error(`Error fetching data for ${id}:`, err);

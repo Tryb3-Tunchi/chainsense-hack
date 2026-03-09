@@ -8,6 +8,7 @@ import {
   formatPrice,
   getChangeColor,
   getRiskBadgeStyle,
+  fetchCryptoData,
 } from "../utils";
 
 interface CustomCoin {
@@ -104,26 +105,32 @@ export default function Watchlist() {
 
     setLoading(true);
     try {
-      const ids = watchlist.map((c) => c.id).join(",");
-      const response = await fetch(
-        `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_market_cap=true&include_24hr_vol=true&include_24hr_change=true&include_market_cap_rank=true`,
-      );
-      const data = await response.json();
+      const allCrypto = await fetchCryptoData();
+      const filteredData = watchlist.map((coin) => {
+        const liveData = allCrypto.find((c) => c.id === coin.id);
+        if (liveData) {
+          return {
+            ...liveData,
+            name: coin.customName, // Use the custom name
+          };
+        }
 
-      const cryptoList = watchlist.map((coin) => ({
-        id: coin.id,
-        symbol: coin.symbol,
-        name: coin.customName,
-        icon: "⭐",
-        color: `#${Math.floor(Math.random() * 16777215).toString(16)}`,
-        price: data[coin.id]?.usd || 0,
-        change24h: data[coin.id]?.usd_24h_change || 0,
-        marketCap: data[coin.id]?.usd_market_cap || 0,
-        volume24h: data[coin.id]?.usd_24h_vol || 0,
-        marketCapRank: data[coin.id]?.market_cap_rank || 0,
-      }));
+        // Fallback if not in the default CRYPTO_COINS list
+        return {
+          id: coin.id,
+          symbol: coin.symbol,
+          name: coin.customName,
+          icon: "⭐",
+          color: `#${Math.floor(Math.random() * 16777215).toString(16)}`,
+          price: 0,
+          change24h: 0,
+          marketCap: 0,
+          volume24h: 0,
+          marketCapRank: 0,
+        };
+      });
 
-      setWatchlistData(cryptoList);
+      setWatchlistData(filteredData);
     } catch (err) {
       console.error("Error fetching watchlist data:", err);
     } finally {
